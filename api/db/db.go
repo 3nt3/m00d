@@ -1,9 +1,41 @@
 package db
 
-import "time"
+import (
+	"database/sql"
+	"fmt"
+	_ "github.com/lib/pq"
+	"time"
+)
 
 type Mood struct {
+	ID        int       `json:"id"`
 	UserID    int       `json:"user_id"`
 	Mood      int       `json:"mood"`
 	CreatedAt time.Time `json:"created_at"`
+}
+
+var db *sql.DB
+
+func Init() error {
+	const (
+		host     = "localhost"
+		port     = 5435
+		user     = "m00d"
+		password = "m00d"
+		dbname   = "m00d"
+	)
+
+	psqlconn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", host, port, user, password, dbname)
+
+	db, err := sql.Open("postgres", psqlconn)
+	if err != nil {
+		return err
+	}
+
+	// init moods table
+	if _, err = db.Exec("create table if not exists moods (id serial primary key, user_id text, mood int, created_at timestamptz)"); err != nil {
+		return err
+	}
+
+	return nil
 }

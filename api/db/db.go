@@ -14,7 +14,7 @@ type Mood struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
-var db *sql.DB
+var DB *sql.DB
 
 func Init() error {
 	const (
@@ -32,8 +32,15 @@ func Init() error {
 		return err
 	}
 
+	DB = db
+
 	// init moods table
 	if _, err = db.Exec("create table if not exists moods (id serial primary key, user_id text, mood int, created_at timestamptz)"); err != nil {
+		return err
+	}
+
+	// init users table
+	if _, err = db.Exec("create table if not exists users (id serial primary key, email text, name text, created_at timestamptz)"); err != nil {
 		return err
 	}
 

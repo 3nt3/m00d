@@ -21,9 +21,10 @@ func main() {
 
 	r.HandleFunc("/moods", routes.NewMood).Methods("POST")
 	r.HandleFunc("/moods", routes.GetMoods).Methods("GET")
-
 	r.HandleFunc("/login", routes.Login).Methods("POST")
 
 	log.Printf("listening on :8080")
 	http.ListenAndServe(":8080", r)
+
+	db.DB.Close()
 }

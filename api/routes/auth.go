@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"m00d/db"
 	"net/http"
 	"time"
 
@@ -45,9 +46,44 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("%+v\n", googleClaims)
+	emailExists, err := db.CheckEmailExists(googleClaims.Email)
+	if err != nil {
+		log.Printf("error reading db: %v\n", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	if !emailExists {
+		log.Printf("user doesn't exist yet.")
+		u := db.User{Email: googleClaims.Email, Name: googleClaims.FirstName + " " + googleClaims.LastName}
+		u.ID, err = db.CreateUser(u)
+		if err != nil {
+			log.Printf("error writing to db: %v\n", err)
+			json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		log.Printf("created new user: %+v\n", u)
+		json.NewEncoder(w).Encode(u)
+		return
+	}
+
+	log.Printf("user exists.")
+	u, err := db.GetUserByEmail(googleClaims.Email)
+	if err != nil {
+		log.Printf("error reading db: %v\n", err)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	log.Printf("user logged in: %+v\n", u)
+	json.NewEncoder(w).Encode(u)
+	return
 }
 
+// this is stolen
 func getGooglePublicKey(keyID string) (string, error) {
 	resp, err := http.Get("https://www.googleapis.com/oauth2/v1/certs")
 	if err != nil {

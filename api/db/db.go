@@ -14,9 +14,17 @@ type Mood struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+type Config struct {
+	SecretKey string `toml:"secret_key"`
+}
+
 var DB *sql.DB
 
-func Init() error {
+func Init(config Config) error {
+	JwtWrapper.SecretKey = config.SecretKey
+	JwtWrapper.ExpirationHours = 24
+	JwtWrapper.Issuer = "???"
+
 	const (
 		host     = "localhost"
 		port     = 5435

@@ -1,17 +1,33 @@
 package main
 
 import (
+	"io/ioutil"
 	"log"
 	"m00d/db"
 	"m00d/routes"
 	"net/http"
 
+	"github.com/BurntSushi/toml"
 	"github.com/gorilla/mux"
 )
 
 func main() {
+	// read config
+	var config db.Config
+
+	content, err := ioutil.ReadFile("config.toml")
+	if err != nil {
+		log.Printf("error reading config.toml: %v\n", err)
+		return
+	}
+
+	if _, err = toml.Decode(string(content), &config); err != nil {
+		log.Printf("error decoding config.toml: %v\n", err)
+		return
+	}
+
 	// initialize db
-	if err := db.Init(); err != nil {
+	if err := db.Init(config); err != nil {
 		log.Panicf("error initiazing db: %v\n", err)
 	}
 	log.Printf("successfully initialized db!")

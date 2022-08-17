@@ -1,7 +1,10 @@
 package db
 
 import (
+	"errors"
 	"time"
+
+	jwt "github.com/dgrijalva/jwt-go"
 )
 
 type User struct {
@@ -45,4 +48,67 @@ func GetUserByEmail(email string) (User, error) {
 
 	err := row.Scan(&u.ID, &u.Email, &u.Name, &u.CreatedAt)
 	return u, err
+}
+
+// JWTWrapper wraps the signing key and the issuer
+type JWTWrapper struct {
+	SecretKey       string
+	Issuer          string
+	ExpirationHours int64
+}
+
+// JWTClaim adds email as a claim to the token
+type JWTClaim struct {
+	Email string
+	jwt.StandardClaims
+}
+
+var JwtWrapper JWTWrapper
+
+// GenerateToken generates a jwt token
+func (j *JWTWrapper) GenerateToken(email string) (signedToken string, err error) {
+	claims := &JWTClaim{
+		Email: email,
+		StandardClaims: jwt.StandardClaims{
+			ExpiresAt: time.Now().Local().Add(time.Hour * time.Duration(j.ExpirationHours)).Unix(),
+			Issuer:    j.Issuer,
+		},
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
+	signedToken, err = token.SignedString([]byte(j.SecretKey))
+	if err != nil {
+		return
+	}
+
+	return
+}
+
+//ValidateToken validates the jwt token
+func (j *JWTWrapper) ValidateToken(signedToken string) (claims *JWTClaim, err error) {
+	token, err := jwt.ParseWithClaims(
+		signedToken,
+		&JWTClaim{},
+		func(token *jwt.Token) (interface{}, error) {
+			return []byte(j.SecretKey), nil
+		},
+	)
+
+	if err != nil {
+		return
+	}
+
+	claims, ok := token.Claims.(*JWTClaim)
+	if !ok {
+		err = errors.New("Couldn't parse claims")
+		return
+	}
+
+	if claims.ExpiresAt < time.Now().Local().Unix() {
+		err = errors.New("JWT is expired")
+		return
+	}
+
+	return
 }

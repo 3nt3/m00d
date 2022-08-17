@@ -2,8 +2,8 @@ package db
 
 import "time"
 
-func GetMoods() ([]Mood, error) {
-	rows, err := DB.Query("select id, mood, user_id, created_at from moods")
+func GetMoods(userID int) ([]Mood, error) {
+	rows, err := DB.Query("select id, mood, user_id, created_at from moods WHERE user_id = $1", userID)
 	if err != nil {
 		return nil, err
 	}

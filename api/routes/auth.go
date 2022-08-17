@@ -53,9 +53,10 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var u db.User
 	if !emailExists {
 		log.Printf("user doesn't exist yet.")
-		u := db.User{Email: googleClaims.Email, Name: googleClaims.FirstName + " " + googleClaims.LastName}
+		u = db.User{Email: googleClaims.Email, Name: googleClaims.FirstName + " " + googleClaims.LastName}
 		u.ID, err = db.CreateUser(u)
 		if err != nil {
 			log.Printf("error writing to db: %v\n", err)
@@ -66,20 +67,31 @@ func Login(w http.ResponseWriter, r *http.Request) {
 
 		log.Printf("created new user: %+v\n", u)
 		json.NewEncoder(w).Encode(u)
-		return
+	} else {
+		log.Printf("user exists.")
+		u, err = db.GetUserByEmail(googleClaims.Email)
+		if err != nil {
+			log.Printf("error reading db: %v\n", err)
+			json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		log.Printf("user logged in: %+v\n", u)
+		json.NewEncoder(w).Encode(u)
 	}
 
-	log.Printf("user exists.")
-	u, err := db.GetUserByEmail(googleClaims.Email)
+	signedToken, err := db.JwtWrapper.GenerateToken(u.Email)
 	if err != nil {
-		log.Printf("error reading db: %v\n", err)
+		log.Printf("error signing token: %v\n", err)
 		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	log.Printf("user logged in: %+v\n", u)
-	json.NewEncoder(w).Encode(u)
+	log.Printf("token: %s\n", signedToken)
+	w.Header().Add("Authorization", "Bearer "+signedToken)
+
 	return
 }
 

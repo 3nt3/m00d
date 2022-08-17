@@ -5,40 +5,44 @@ import (
 	"log"
 	"m00d/db"
 	"net/http"
-	"strings"
 )
 
 func NewMood(w http.ResponseWriter, r *http.Request) {
+	u, status, err := authorizeRequest(r)
+	if err != nil {
+		log.Printf("error authorizing? (status %d): %v\n", status, err)
+		w.WriteHeader(status)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		return
+	}
+
+	var m db.Mood
+	if err := json.NewDecoder(r.Body).Decode(&m); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	m.UserID = u.ID
+
+	m, err = db.NewMood(m)
+	if err != nil {
+		log.Printf("error writing to db: %v\n", err)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	log.Printf("%+v\n", m)
+
+	json.NewEncoder(w).Encode(m)
 }
 
 func GetMoods(w http.ResponseWriter, r *http.Request) {
-	header := r.Header.Get("Authorization")
-	if header == "" {
-		log.Printf("request not authorized.")
-		w.WriteHeader(http.StatusUnauthorized)
-		return
-	}
-
-	split := strings.Split(header, " ")
-	if len(split) != 2 {
-		log.Printf("authorization header malformed: %s\n", header)
-		w.WriteHeader(http.StatusUnauthorized)
-		return
-	}
-
-	claims, err := db.JwtWrapper.ValidateToken(split[1])
+	u, status, err := authorizeRequest(r)
 	if err != nil {
-		log.Printf("error validating token: %v\n", err)
+		log.Printf("error authorizing? (status %d): %v\n", status, err)
+		w.WriteHeader(status)
 		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	u, err := db.GetUserByEmail(claims.Email)
-	if err != nil {
-		log.Printf("error reading from db: %v\n", err)
-		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
-		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	log.Printf("user: %+v\n", u)

@@ -8,6 +8,7 @@ import (
 	"log"
 	"m00d/db"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt"
@@ -161,4 +162,30 @@ func validateGoogleJWT(tokenString string) (GoogleClaims, error) {
 	}
 
 	return *claims, nil
+}
+
+func authorizeRequest(r *http.Request) (db.User, int, error) {
+	var u db.User
+
+	header := r.Header.Get("Authorization")
+	if header == "" {
+		return u, http.StatusUnauthorized, errors.New("request not authorized.")
+	}
+
+	split := strings.Split(header, " ")
+	if len(split) != 2 {
+		return u, http.StatusUnauthorized, errors.New(fmt.Sprintf("authorization header malformed: %s\n", header))
+	}
+
+	claims, err := db.JwtWrapper.ValidateToken(split[1])
+	if err != nil {
+		return u, http.StatusInternalServerError, errors.New(fmt.Sprintf("error validating token: %v\n", err))
+	}
+
+	u, err = db.GetUserByEmail(claims.Email)
+	if err != nil {
+		return u, http.StatusInternalServerError, errors.New(fmt.Sprintf("error reading from db: %v\n", err))
+	}
+
+	return u, http.StatusOK, nil
 }

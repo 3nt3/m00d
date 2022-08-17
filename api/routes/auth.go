@@ -90,7 +90,6 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("token: %s\n", signedToken)
 	w.Header().Add("Authorization", "Bearer "+signedToken)
 
 	return
@@ -188,4 +187,25 @@ func authorizeRequest(r *http.Request) (db.User, int, error) {
 	}
 
 	return u, http.StatusOK, nil
+}
+
+func Refresh(w http.ResponseWriter, r *http.Request) {
+	u, status, err := authorizeRequest(r)
+	if err != nil {
+		log.Printf("error authorizing? (status %d): %v\n", status, err)
+		w.WriteHeader(status)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		return
+	}
+
+	signedToken, err := db.JwtWrapper.GenerateToken(u.Email)
+	if err != nil {
+		log.Printf("error signing token: %v\n", err)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Add("Authorization", "Bearer "+signedToken)
+	w.WriteHeader(http.StatusNoContent)
 }

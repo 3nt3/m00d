@@ -23,7 +23,7 @@ var DB *sql.DB
 func Init(config Config) error {
 	JwtWrapper.SecretKey = config.SecretKey
 	JwtWrapper.ExpirationHours = 24
-	JwtWrapper.Issuer = "???"
+	JwtWrapper.Issuer = "m00d"
 
 	const (
 		host     = "localhost"

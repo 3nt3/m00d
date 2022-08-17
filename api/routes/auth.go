@@ -174,17 +174,17 @@ func authorizeRequest(r *http.Request) (db.User, int, error) {
 
 	split := strings.Split(header, " ")
 	if len(split) != 2 {
-		return u, http.StatusUnauthorized, errors.New(fmt.Sprintf("authorization header malformed: %s\n", header))
+		return u, http.StatusUnauthorized, errors.New(fmt.Sprintf("authorization header malformed: %s", header))
 	}
 
 	claims, err := db.JwtWrapper.ValidateToken(split[1])
 	if err != nil {
-		return u, http.StatusInternalServerError, errors.New(fmt.Sprintf("error validating token: %v\n", err))
+		return u, http.StatusInternalServerError, errors.New(fmt.Sprintf("error validating token: %v", err))
 	}
 
 	u, err = db.GetUserByEmail(claims.Email)
 	if err != nil {
-		return u, http.StatusInternalServerError, errors.New(fmt.Sprintf("error reading from db: %v\n", err))
+		return u, http.StatusInternalServerError, errors.New(fmt.Sprintf("error reading from db: %v", err))
 	}
 
 	return u, http.StatusOK, nil

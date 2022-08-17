@@ -1,8 +1,14 @@
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:app/api.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
+import 'package:http/http.dart' as http;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -57,26 +63,78 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
+  bool _loggedIn = false;
 
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+      scopes: <String>["email"],
+      serverClientId:
+          '82145806916-vocueu5na49d2lgusnotbrjdd7ne77mp.apps.googleusercontent.com');
+
+  final _storage = new FlutterSecureStorage();
+
+  @override
+  void initState() {
+    super.initState();
+    _initAuth();
+  }
+
+  void _initAuth() async {
+    var jwt = await _storage.read(key: "jwt");
+    if (jwt != null) {
+      debugPrint("token exists, attempting refresh");
+      jwt = await _refreshToken(jwt);
+    } else {
+      debugPrint("no token stored, logging in");
+      jwt = await _login();
+    }
+    _storage.write(key: "jwt", value: jwt);
+    debugPrint("new token: $jwt");
+  }
+
+  Future<String?> _refreshToken(String jwt) async {
+    var response = await http.post(Uri.parse("$API_URL/refresh-token"),
+        headers: {"Authorization": "Bearer $jwt"});
+
+    if (response.statusCode >= 400) {
+      try {
+        return await _login();
+      } catch (_) {
+        return null;
+      }
+    }
+
+    return jsonDecode(response.body)['token'];
+  }
+
+  Future<String?> _login() async {
+    // first try signing in silently, and then don't if that doesn't work
+    var acc =
+        await _googleSignIn.signInSilently() ?? await _googleSignIn.signIn();
+    if (acc == null) return null;
+
+    final GoogleSignInAuthentication auth = await acc.authentication;
+    debugPrint(auth.idToken);
+    var response = await http.post(Uri.parse("$API_URL/login"),
+        body: jsonEncode({"id_token": auth.idToken}),
+        headers: <String, String>{
+          HttpHeaders.contentTypeHeader: 'application/json'
+        });
+
+    debugPrint(jsonDecode(response.body)['token']);
+
+    return jsonDecode(response.body)['token'];
   }
 
   Future<void> _signInWithGoogle() async {
     var acc = await _googleSignIn.signIn();
     if (acc == null) return;
-    var auth = await acc.authentication;
-    debugPrint(auth.accessToken);
+
+    final GoogleSignInAuthentication auth = await acc.authentication;
+    debugPrint("SIGNED IN: ${auth.idToken}");
+    var response = await http.post(Uri.parse("$API_URL/login"),
+        body: jsonEncode({"id_token": auth.idToken}));
+
+    debugPrint(response.toString());
   }
 
   @override
@@ -112,15 +170,7 @@ class _MyHomePageState extends State<MyHomePage> {
           // axis because Columns are vertical (the cross axis would be
           // horizontal).
           mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text(
-              'You have pushed the button this many times:',
-            ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headline4,
-            ),
-          ],
+          children: <Widget>[],
         ),
       ),
       floatingActionButton: FloatingActionButton(

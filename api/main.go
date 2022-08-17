@@ -39,9 +39,32 @@ func main() {
 	r.HandleFunc("/moods", routes.GetMoods).Methods("GET")
 	r.HandleFunc("/login", routes.Login).Methods("POST")
 	r.HandleFunc("/refresh-token", routes.Refresh).Methods("POST")
+	r.Use(corsMiddleware)
 
 	log.Printf("listening on :8080")
 	http.ListenAndServe(":8080", r)
 
 	db.DB.Close()
+}
+
+func corsMiddleware(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "OPTIONS" {
+			handlePreflight(w, r)
+		}
+
+		// do normal stuff
+		h.ServeHTTP(w, r)
+	})
+}
+
+func handlePreflight(w http.ResponseWriter, r *http.Request) {
+	// set cors headers
+	// very secure lol
+	log.Printf("%+v\n", r.Method)
+	w.Header().Add("access-control-allow-origin", "*")
+	w.Header().Add("access-control-allow-credentials", "true")
+	w.Header().Add("access-control-allow-headers", "authorization")
+	w.Header().Add("access-control-allow-methods", "get,put,post,delete,options")
+	w.Header().Add("access-control-expose-headers", "origin,authorization,Authorization,*")
 }

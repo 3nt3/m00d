@@ -41,16 +41,16 @@ func Login(w http.ResponseWriter, r *http.Request) {
 
 	googleClaims, err := validateGoogleJWT(idToken)
 	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
 		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 		log.Printf("error: %v\n", err)
-		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
 	emailExists, err := db.CheckEmailExists(googleClaims.Email)
 	if err != nil {
-		log.Printf("error reading db: %v\n", err)
 		w.WriteHeader(http.StatusInternalServerError)
+		log.Printf("error reading db: %v\n", err)
 		return
 	}
 
@@ -60,39 +60,36 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		u = db.User{Email: googleClaims.Email, Name: googleClaims.FirstName + " " + googleClaims.LastName}
 		u.ID, err = db.CreateUser(u)
 		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
 			log.Printf("error writing to db: %v\n", err)
 			json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
-			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
 		log.Printf("created new user: %+v\n", u)
-		json.NewEncoder(w).Encode(u)
 	} else {
 		log.Printf("user exists.")
 		u, err = db.GetUserByEmail(googleClaims.Email)
 		if err != nil {
 			log.Printf("error reading db: %v\n", err)
-			json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 			return
 		}
 
 		log.Printf("user logged in: %+v\n", u)
-		json.NewEncoder(w).Encode(u)
 	}
 
 	signedToken, err := db.JwtWrapper.GenerateToken(u.Email)
 	if err != nil {
 		log.Printf("error signing token: %v\n", err)
-		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 		return
 	}
 
-	w.Header().Add("Authorization", "Bearer "+signedToken)
-
-	return
+	w.WriteHeader(200)
+	err = json.NewEncoder(w).Encode(map[string]string{"token": signedToken})
 }
 
 // this is stolen
@@ -166,7 +163,7 @@ func validateGoogleJWT(tokenString string) (GoogleClaims, error) {
 func authorizeRequest(r *http.Request) (db.User, int, error) {
 	var u db.User
 
-	header := r.Header.Get("Authorization")
+	header := r.Header.Get("authorization")
 	if header == "" {
 		return u, http.StatusUnauthorized, errors.New("request not authorized.")
 	}
@@ -206,6 +203,5 @@ func Refresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Add("Authorization", "Bearer "+signedToken)
-	w.WriteHeader(http.StatusNoContent)
+	json.NewEncoder(w).Encode(map[string]string{"token": signedToken})
 }

@@ -1,5 +1,15 @@
+<<<<<<< Updated upstream
 import 'package:app/providers/user_provider.dart';
 import 'package:app/routes/home.dart';
+=======
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:app/api.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+>>>>>>> Stashed changes
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';

@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -104,3 +105,7 @@ Future<String?> _login() async {
 }
 
 class _googleSignIn {}
+=======
+//final API_URL = "http://gott-himalayas.nord:8080";
+final API_URL = "http://192.178.168.196:8080";
+>>>>>>> Stashed changes

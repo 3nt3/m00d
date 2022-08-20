@@ -1,15 +1,6 @@
-<<<<<<< Updated upstream
 import 'package:app/providers/user_provider.dart';
 import 'package:app/routes/home.dart';
-=======
-import 'dart:convert';
-import 'dart:io';
-
-import 'package:app/api.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:google_sign_in/google_sign_in.dart';
->>>>>>> Stashed changes
+import 'package:app/routes/login.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -50,10 +41,9 @@ class MyApp extends StatelessWidget {
           // is not restarted.
           primarySwatch: Colors.blue,
         ),
-        home: const MyHomePage(title: 'Flutter Demo Home Page'),
         routes: {
-          '/': (context) => MyHomePage(),
-          '/login': (context) => MyLoginPage(),
+          '/': (context) => const MyHomePage(),
+          '/login': (context) => const MyLoginPage(),
         });
   }
 }

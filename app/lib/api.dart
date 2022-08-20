@@ -1,5 +1,5 @@
-<<<<<<< Updated upstream
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -9,7 +9,7 @@ import 'models.dart';
 
 import 'package:http/http.dart' as http;
 
-const apiUrl = "http://gott-himalayas.nord:8080";
+const apiUrl = "http://192.168.178.196:8080";
 
 Future<List<Mood>> getMoods({required String token}) async {
   var resp = await http.get(Uri.parse('$apiUrl/moods'),
@@ -49,29 +49,30 @@ String _extractError(http.Response resp) {
   return 'Request failed with status ${resp.statusCode}. Error: \'$error\'';
 }
 
-Future<String?> initAuth() async {
-  final storage = const FlutterSecureStorage();
+Future<String?> initAuth({required bool visible}) async {
+  const storage = FlutterSecureStorage();
 
   var jwt = await storage.read(key: "jwt");
   if (jwt != null) {
     debugPrint("token exists, attempting refresh");
-    jwt = await _refreshToken(jwt);
+    jwt = await _refreshToken(jwt, visible: visible);
   } else {
     debugPrint("no token stored, logging in");
-    jwt = await _login();
+    jwt = await login(visible: visible);
   }
 
-  storage.write(key: "jwt", value: jwt);
+  debugPrint("writing $jwt to storage");
+  await storage.write(key: "jwt", value: jwt);
   return jwt;
 }
 
-Future<String?> _refreshToken(String jwt) async {
+Future<String?> _refreshToken(String jwt, {required bool visible}) async {
   var response = await http.post(Uri.parse("$apiUrl/refresh-token"),
       headers: {"Authorization": "Bearer $jwt"});
 
   if (response.statusCode >= 400) {
     try {
-      return await _login();
+      return await login(visible: visible);
     } catch (_) {
       return null;
     }
@@ -80,32 +81,24 @@ Future<String?> _refreshToken(String jwt) async {
   return jsonDecode(response.body)['token'];
 }
 
-Future<String?> _login() async {
+Future<String?> login({required bool visible}) async {
   // first try signing in silently, and then don't if that doesn't work
   debugPrint('refresh didn\'t work for some reason, logging in normally');
 
-  final GoogleSignIn _googleSignIn = GoogleSignIn(
+  final GoogleSignIn googleSignIn = GoogleSignIn(
       scopes: <String>["email"],
       serverClientId:
           '82145806916-vocueu5na49d2lgusnotbrjdd7ne77mp.apps.googleusercontent.com');
-  var acc = await googleSignIn.signInSilently() ?? await googleSignIn.signIn();
+  var acc = await googleSignIn.signInSilently() ??
+      (visible ? await googleSignIn.signIn() : null);
   if (acc == null) return null;
 
   final GoogleSignInAuthentication auth = await acc.authentication;
-  debugPrint(auth.idToken);
   var response = await http.post(Uri.parse("$apiUrl/login"),
       body: jsonEncode({"id_token": auth.idToken}),
       headers: <String, String>{
         HttpHeaders.contentTypeHeader: 'application/json'
       });
 
-  debugPrint(jsonDecode(response.body)['token']);
-
   return jsonDecode(response.body)['token'];
 }
-
-class _googleSignIn {}
-=======
-//final API_URL = "http://gott-himalayas.nord:8080";
-final API_URL = "http://192.178.168.196:8080";
->>>>>>> Stashed changes

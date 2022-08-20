@@ -203,5 +203,7 @@ func Refresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Printf("generated new token for %s (#%d)\n", u.Email, u.ID)
+
 	json.NewEncoder(w).Encode(map[string]string{"token": signedToken})
 }

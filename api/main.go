@@ -42,7 +42,7 @@ func main() {
 	r.Use(corsMiddleware)
 
 	log.Printf("listening on :8080")
-	err = http.ListenAndServe(":8080", r)
+	err = http.ListenAndServe("0.0.0.0:8080", r)
 	if err != nil {
 		log.Printf("error listening: %v\n", err)
 	}

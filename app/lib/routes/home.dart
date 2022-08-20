@@ -26,6 +26,7 @@ class _MyHomePageState extends State<MyHomePage> {
   void initState() {
     super.initState();
     _checkAuth();
+    _getUser();
   }
 
   Future<void> _checkAuth() async {
@@ -38,13 +39,18 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
+  Future<User?> _getUser() async {}
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[],
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 50, horizontal: 20),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[],
+          ),
         ),
       ),
     );

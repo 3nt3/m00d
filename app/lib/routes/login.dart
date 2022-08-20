@@ -12,14 +12,6 @@ class MyLoginPage extends StatefulWidget {
 }
 
 class _MyLoginPageState extends State<MyLoginPage> {
-  final GoogleSignIn _googleSignIn = GoogleSignIn(
-      scopes: <String>["email"],
-      serverClientId:
-          '82145806916-vocueu5na49d2lgusnotbrjdd7ne77mp.apps.googleusercontent.com');
-
-  final _storage = FlutterSecureStorage();
-  String _token = '';
-
   @override
   void initState() {
     // TODO: implement initState
@@ -38,8 +30,6 @@ class _MyLoginPageState extends State<MyLoginPage> {
 
     // I'm not sure if this is ever actually called since login() should throw an exception whenever something goes wrong
     if (token == null) {
-      debugPrint("whatever");
-
       if (!mounted) return; // what does this even do?
       _handleError(context, "something bad happened");
     }
